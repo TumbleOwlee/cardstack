@@ -38,6 +38,7 @@ and shall not change without a spec change.
 | Key | Effect |
 |---|---|
 | `[` / `]` (or scroll) | Switch to previous/next board tab |
+| `Ctrl+T` then a digit | Switch directly to the board at that index (`UI-R-004`) |
 
 ## Keybindings — task detail / category-management / confirm dialogs
 
