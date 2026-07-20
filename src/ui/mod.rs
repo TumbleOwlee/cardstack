@@ -139,7 +139,7 @@ fn render_cmdline(
 /// condition text, centered, white on blue, between the board and command line.
 fn render_filter_status(frame: &mut Frame, area: Rect, filter: &Filter) {
     let style = Style::default()
-        .bg(ratatui::style::Color::Blue)
+        .bg(COLOR_SCHEME.hi)
         .fg(ratatui::style::Color::White);
     frame.buffer_mut().set_style(area, style);
     let text = format!("Filter: {}", filter.describe());
@@ -414,7 +414,7 @@ mod tests {
 
         // The whole row is white on blue.
         let cell = &buf[(0, row)];
-        assert_eq!(cell.bg, ratatui::style::Color::Blue);
+        assert_eq!(cell.bg, COLOR_SCHEME.hi);
         assert_eq!(cell.fg, ratatui::style::Color::White);
 
         // Centered: the text does not start in column 0.
