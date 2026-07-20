@@ -1,10 +1,12 @@
+use std::collections::HashMap;
+
 use chrono::NaiveDate;
 use ferrowl_ui::COLOR_SCHEME;
 use ratatui::{
     Frame,
     layout::{Constraint, Layout, Rect},
     style::{Color, Modifier, Style},
-    text::Span,
+    text::{Line, Span},
     widgets::{Block, BorderType, Borders, Paragraph, Wrap},
 };
 
@@ -48,12 +50,44 @@ fn wrapped_line_count(text: &str, width: u16) -> u16 {
     lines.max(1)
 }
 
+/// UI-R-014 — badge display text for a label: uppercase, padded with a
+/// 1-cell space margin either side, no brackets.
+fn label_badge_text(label: &str) -> String {
+    format!(" {} ", label.to_uppercase())
+}
+
+/// UI-R-014 — group `labels` into wrapped rows at `width` columns, greedily
+/// packing whole badge tokens (never splitting a badge mid-token, unlike
+/// `wrapped_line_count`'s plain-text word wrap).
+fn label_lines(labels: &[String], width: u16) -> Vec<Vec<&String>> {
+    if labels.is_empty() {
+        return Vec::new();
+    }
+    let width = width as usize;
+    let mut rows: Vec<Vec<&String>> = vec![Vec::new()];
+    let mut current = 0usize;
+    for label in labels {
+        let token_width = label_badge_text(label).width();
+        let row = rows.last_mut().expect("rows always has at least one row");
+        let sep = if row.is_empty() { 0 } else { 1 };
+        if !row.is_empty() && current + sep + token_width > width {
+            rows.push(vec![label]);
+            current = token_width;
+        } else {
+            row.push(label);
+            current += sep + token_width;
+        }
+    }
+    rows
+}
+
 /// UI-R-011 — a card's total height (including its border), given the
 /// content width available for the wrapped description.
 pub fn card_height(width: u16, task: &Task) -> u16 {
     let content_width = width.saturating_sub(4); // border (2) + horizontal margin (2)
     let desc_lines = wrapped_line_count(&task.description, content_width);
-    CARD_FIXED_ROWS + desc_lines
+    let label_rows = label_lines(&task.labels, content_width).len() as u16;
+    CARD_FIXED_ROWS + desc_lines + label_rows
 }
 
 /// BD-R-040, UI-R-012 — a task's card color: its category's color, or the
@@ -75,6 +109,8 @@ fn is_overdue(task: &Task, today: NaiveDate) -> bool {
 /// UI-R-011 — render one task as a bordered card: bold title on row one,
 /// wrapped description below it, category (bottom-left) and due date
 /// (bottom-right) on the footer row.
+/// UI-R-014 — a labels row (wrapped, badge-styled) between the description
+/// and the footer, present only when the task has labels.
 /// UI-R-023 — the focused card gets a distinct border, keeping its category color.
 /// UI-R-055 — fill the card's interior with the theme background before content.
 pub fn render(
@@ -82,6 +118,7 @@ pub fn render(
     area: Rect,
     task: &Task,
     board: &Board,
+    label_colors: &HashMap<String, (u8, u8, u8)>,
     today: NaiveDate,
     focused: bool,
 ) {
@@ -105,9 +142,12 @@ pub fn render(
         .set_style(inner, Style::default().bg(COLOR_SCHEME.bg));
     let inner = inner.inner(ratatui::layout::Margin::new(1, 0));
 
-    let [title_a, desc_a, footer_a] = Layout::vertical([
+    let label_rows = label_lines(&task.labels, inner.width);
+
+    let [title_a, desc_a, labels_a, footer_a] = Layout::vertical([
         Constraint::Length(1),
         Constraint::Min(1),
+        Constraint::Length(label_rows.len() as u16),
         Constraint::Length(1),
     ])
     .areas(inner);
@@ -125,6 +165,28 @@ pub fn render(
             .wrap(Wrap { trim: false }),
         desc_a,
     );
+
+    for (i, row) in label_rows.iter().enumerate() {
+        let row_area = Rect::new(labels_a.x, labels_a.y + i as u16, labels_a.width, 1);
+        let mut spans = Vec::new();
+        for (j, label) in row.iter().enumerate() {
+            if j > 0 {
+                spans.push(Span::raw(" "));
+            }
+            let label_color = label_colors
+                .get(label.as_str())
+                .map(|&(r, g, b)| Color::Rgb(r, g, b))
+                .unwrap_or(COLOR_SCHEME.border);
+            spans.push(Span::styled(
+                label_badge_text(label),
+                Style::default()
+                    .bg(label_color)
+                    .fg(contrasting_text(label_color))
+                    .add_modifier(Modifier::BOLD),
+            ));
+        }
+        frame.render_widget(Paragraph::new(Line::from(spans)), row_area);
+    }
 
     let due_text = task.due_date.map(|d| d.format("%Y-%m-%d").to_string());
     let due_width = due_text.as_ref().map(|s| s.len() as u16).unwrap_or(0);
@@ -177,10 +239,11 @@ mod tests {
     }
 
     fn render_to_string(task: &Task, board: &Board, today: NaiveDate) -> String {
+        let label_colors = board.label_colors();
         let backend = TestBackend::new(30, card_height(30, task));
         let mut terminal = Terminal::new(backend).unwrap();
         terminal
-            .draw(|f| render(f, f.area(), task, board, today, false))
+            .draw(|f| render(f, f.area(), task, board, &label_colors, today, false))
             .unwrap();
         terminal
             .backend()
@@ -239,5 +302,44 @@ mod tests {
             card_color(&board, &t),
             Color::Rgb(expected.0, expected.1, expected.2)
         );
+    }
+
+    /// UI-R-011, UI-R-014
+    #[test]
+    fn ut_card_height_unchanged_without_labels() {
+        let t = task("No labels");
+        assert_eq!(card_height(30, &t), CARD_FIXED_ROWS + 1);
+    }
+
+    /// UI-R-014
+    #[test]
+    fn ut_card_height_grows_for_labels_row() {
+        let mut t = task("Has labels");
+        t.labels = vec!["bug".to_string(), "urgent".to_string()];
+        let without_labels_height = CARD_FIXED_ROWS + 1;
+        assert!(card_height(30, &t) > without_labels_height);
+    }
+
+    /// UI-R-014
+    #[test]
+    fn ut_label_lines_wraps_without_splitting_badge() {
+        let labels = vec!["aaaaa".to_string(), "bbbbb".to_string()];
+        // width fits neither badge alongside the other, but fits each alone.
+        let rows = label_lines(&labels, 9);
+        assert_eq!(rows.len(), 2);
+        assert_eq!(rows[0], vec![&labels[0]]);
+        assert_eq!(rows[1], vec![&labels[1]]);
+    }
+
+    /// UI-R-014
+    #[test]
+    fn ut_card_renders_uppercase_padded_label_no_brackets() {
+        let board = Board::new("b");
+        let mut t = task("Task");
+        t.labels = vec!["bug".to_string()];
+        let out = render_to_string(&t, &board, NaiveDate::from_ymd_opt(2026, 1, 1).unwrap());
+        assert!(out.contains(" BUG "));
+        assert!(!out.contains('['));
+        assert!(!out.contains(']'));
     }
 }
