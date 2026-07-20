@@ -15,8 +15,9 @@ use unicode_width::UnicodeWidthStr;
 use super::contrasting_text;
 use crate::model::{Board, Task};
 
-/// Non-content rows: top+bottom border, title row, footer row.
-const CARD_FIXED_ROWS: u16 = 4;
+/// Non-content rows: top+bottom border, title row, the blank row before the
+/// footer (UI-R-011), and the footer row.
+const CARD_FIXED_ROWS: u16 = 5;
 
 /// UI-R-011 — count how many rows `text` wraps to at `width` columns
 /// (greedy word-wrap, matching `Paragraph`'s `Wrap { trim: false }`).
@@ -87,7 +88,9 @@ pub fn card_height(width: u16, task: &Task) -> u16 {
     let content_width = width.saturating_sub(4); // border (2) + horizontal margin (2)
     let desc_lines = wrapped_line_count(&task.description, content_width);
     let label_rows = label_lines(&task.labels, content_width).len() as u16;
-    CARD_FIXED_ROWS + desc_lines + label_rows
+    // UI-R-011 — a blank row follows the labels row, only when it's present.
+    let label_gap = if label_rows > 0 { 1 } else { 0 };
+    CARD_FIXED_ROWS + desc_lines + label_rows + label_gap
 }
 
 /// BD-R-040, UI-R-012 — a task's card color: its category's color, or the
@@ -143,11 +146,21 @@ pub fn render(
     let inner = inner.inner(ratatui::layout::Margin::new(1, 0));
 
     let label_rows = label_lines(&task.labels, inner.width);
+    let label_gap: u16 = if label_rows.is_empty() { 0 } else { 1 };
 
-    let [labels_a, title_a, desc_a, footer_a] = Layout::vertical([
+    let [
+        labels_a,
+        _label_gap_a,
+        title_a,
+        desc_a,
+        _footer_gap_a,
+        footer_a,
+    ] = Layout::vertical([
         Constraint::Length(label_rows.len() as u16),
+        Constraint::Length(label_gap),
         Constraint::Length(1),
         Constraint::Min(1),
+        Constraint::Length(1),
         Constraint::Length(1),
     ])
     .areas(inner);
