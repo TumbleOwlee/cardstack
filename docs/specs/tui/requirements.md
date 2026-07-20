@@ -19,8 +19,9 @@ alternate screen buffer with raw mode enabled, and shall restore the terminal on
 normal exit, error exit, and from a panic hook.
 
 **UI-R-002** — The screen shall be laid out top-to-bottom as: a one-row board
-tab bar, the three-column board area, and a one-row command line. The board
-area absorbs the remaining height.
+tab bar, the three-column board area, an optional one-row filter-status line
+(`UI-R-061`, present only when the active board has a filter), and a one-row
+command line. The board area absorbs the remaining height.
 
 **UI-R-003** — Every board loaded at startup (per `ST-R-020`) shall appear as a
 tab in the tab bar; the application shall track one active (displayed) board at
@@ -164,8 +165,9 @@ the command line shows the static hint text `: command`, in white, in its
 place.
 
 **UI-R-051** — The generic commands are `:new-task`, `:new-board <name>`,
-`:rename <name>`, `:swap <i> <j>`, `:delete`, and `:categories` (see
-[`api-contract.md`](./api-contract.md) for exact syntax). An unrecognized
+`:rename <name>`, `:swap <i> <j>`, `:delete`, `:categories`, and `:filter
+<condition>` (see [`api-contract.md`](./api-contract.md) for exact syntax). An
+unrecognized
 command shall display a single-line error message in the command line,
 styled as an error, and have no other effect. The application shall never
 write to stdout or stderr while the terminal UI is active.
@@ -204,3 +206,30 @@ background.
 selection/list widgets) that is not currently focused shall render its border
 and title in white. This does not apply to a card's border, which is always
 colorized by its category (`UI-R-012`) regardless of focus.
+
+## Filtering
+
+**UI-R-060** — `:filter <condition>` shall restrict the visible cards of the
+active board to those matching `<condition>`. A condition is a space-separated
+set of `key=value` terms with keys `category` and `label`, each appearing at
+most once. `category=<expr>` matches a task whose category equals **any** of the
+`|`-separated names in `<expr>`; `&` is not valid in a `category` value — a task
+has at most one category (`BD-R-010`) — and such a condition is an error.
+`label=<expr>` matches against a task's labels, where `<expr>` is a single
+label, an `&`-separated list (the task must carry **all** listed labels), or a
+`|`-separated list (the task must carry **any** listed label); `&` and `|` shall
+not be combined in one `<expr>`. When both terms are present a task matches only
+if it satisfies both. All category and label comparisons shall be
+case-insensitive (`BD-R-010`, `BD-R-040`). A filter is scoped to its board and
+held only in memory — it is never written to the save file (`ST-R-*`). `:filter`
+with no condition, `:filter clear`, and — while in board view — `Esc` shall
+clear the active board's filter. A syntactically invalid condition (an unknown
+key, an empty value, or a mixed `&`/`|` expression) shall display a command-line
+error (`UI-R-051`) and leave any existing filter unchanged.
+
+**UI-R-061** — While the active board has a filter (`UI-R-060`), a one-row
+filter-status line shall be shown between the board area and the command line,
+displaying the active filter's condition text centered on the row in white on
+the same background the active board tab uses (the theme's highlight background,
+`UI-R-004`); when no filter is active the row is not shown and the board area
+reclaims its height (`UI-R-002`).

@@ -11,6 +11,7 @@ use crate::dialog::{
     CategoryDialog, CategoryDialogAction, ConfirmAction, ConfirmDialog, DialogAction, DialogTarget,
     TaskDialog,
 };
+use crate::filter::Filter;
 use crate::focus::Focus;
 use crate::model::Board;
 use crate::storage;
@@ -296,10 +297,38 @@ impl App {
             Command::Categories => {
                 self.category_dialog = Some(CategoryDialog::new(&self.boards[self.active]))
             }
+            Command::Filter(query) => self.set_filter(&query),
             Command::Quit => self.should_quit = true,
             Command::Unknown(cmd) => {
                 self.cmdline_error = Some(format!("Unknown command: {cmd}"));
             }
+        }
+    }
+
+    /// UI-R-060 — apply, replace, or clear the active board's filter from a
+    /// `:filter` condition. An invalid condition surfaces a command-line error
+    /// (`UI-R-051`) and leaves any existing filter unchanged.
+    fn set_filter(&mut self, query: &str) {
+        match Filter::parse(query) {
+            Ok(filter) => {
+                self.boards[self.active].filter = filter;
+                // The filter can hide the focused card; drop to a visible one.
+                self.focus.resync(&self.boards[self.active]);
+            }
+            Err(()) => {
+                self.cmdline_error = Some(format!("Invalid filter: {query}"));
+            }
+        }
+    }
+
+    /// UI-R-060 — clear the active board's filter (bound to `Esc` in board
+    /// view). Returns whether a filter was actually cleared.
+    fn clear_filter(&mut self) -> bool {
+        if self.boards[self.active].filter.take().is_some() {
+            self.focus.resync(&self.boards[self.active]);
+            true
+        } else {
+            false
         }
     }
 
@@ -427,6 +456,10 @@ impl App {
             KeyCode::Char('l') | KeyCode::Right => self.move_column_focus(true),
             KeyCode::Char('j') | KeyCode::Down => self.move_card_focus(true),
             KeyCode::Char('k') | KeyCode::Up => self.move_card_focus(false),
+            // UI-R-060 — Esc clears the active board's filter, if one is set.
+            KeyCode::Esc => {
+                self.clear_filter();
+            }
             _ => {}
         }
     }
@@ -491,5 +524,73 @@ mod tests {
         a.handle_key(KeyCode::Char(':'), KeyModifiers::NONE);
         assert_eq!(a.cmdline_error, None);
         assert!(a.cmdline.is_some());
+    }
+
+    use crate::model::Status;
+
+    fn visible_titles(a: &App) -> Vec<String> {
+        a.active_board()
+            .visible_tasks_in(Status::Open)
+            .map(|t| t.title.clone())
+            .collect()
+    }
+
+    /// UI-R-060 — `:filter` narrows the visible cards to matching tasks.
+    #[test]
+    fn ut_filter_command_narrows_visible_cards() {
+        let mut a = app();
+        let b = &mut a.boards[0];
+        b.create_task("bug task", Status::Open);
+        b.tasks[0].labels = vec!["bug".to_string()];
+        b.create_task("plain task", Status::Open);
+
+        a.run_command("filter label=bug");
+        assert_eq!(visible_titles(&a), vec!["bug task"]);
+    }
+
+    /// UI-R-060 — bare `:filter` and `:filter clear` both clear the filter.
+    #[test]
+    fn ut_filter_command_clears() {
+        let mut a = app();
+        a.boards[0].create_task("t", Status::Open);
+        a.boards[0].tasks[0].labels = vec!["bug".to_string()];
+
+        a.run_command("filter label=nomatch");
+        assert!(visible_titles(&a).is_empty());
+        a.run_command("filter");
+        assert_eq!(visible_titles(&a), vec!["t"]);
+
+        a.run_command("filter label=nomatch");
+        assert!(visible_titles(&a).is_empty());
+        a.run_command("filter clear");
+        assert_eq!(visible_titles(&a), vec!["t"]);
+    }
+
+    /// UI-R-060 — `Esc` in board view clears an active filter.
+    #[test]
+    fn ut_esc_clears_filter() {
+        let mut a = app();
+        a.boards[0].create_task("t", Status::Open);
+        a.boards[0].tasks[0].labels = vec!["bug".to_string()];
+        a.run_command("filter label=nomatch");
+        assert!(visible_titles(&a).is_empty());
+
+        a.handle_key(KeyCode::Esc, KeyModifiers::NONE);
+        assert_eq!(visible_titles(&a), vec!["t"]);
+    }
+
+    /// UI-R-060 — an invalid condition errors and leaves the filter unchanged.
+    #[test]
+    fn ut_invalid_filter_errors_and_keeps_existing() {
+        let mut a = app();
+        a.boards[0].create_task("bug task", Status::Open);
+        a.boards[0].tasks[0].labels = vec!["bug".to_string()];
+        a.boards[0].create_task("plain task", Status::Open);
+
+        a.run_command("filter label=bug");
+        a.run_command("filter label=a&b|c");
+        assert!(a.cmdline_error.is_some());
+        // The prior filter still applies.
+        assert_eq!(visible_titles(&a), vec!["bug task"]);
     }
 }

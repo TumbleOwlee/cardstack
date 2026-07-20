@@ -1,6 +1,8 @@
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 
+use crate::filter::Filter;
+
 /// BD-R-011 — a task's status.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Status {
@@ -65,6 +67,10 @@ pub struct Board {
     pub tasks: Vec<Task>,
     #[serde(default)]
     next_id: u64,
+    /// UI-R-060 — the active `:filter`, scoped to this board and held only in
+    /// memory (never persisted).
+    #[serde(skip)]
+    pub filter: Option<Filter>,
 }
 
 /// BD-R-041 — palette categories are auto-assigned from, cycling once exhausted.
@@ -89,6 +95,7 @@ impl Board {
             categories: Vec::new(),
             tasks: Vec::new(),
             next_id: 0,
+            filter: None,
         }
     }
 
@@ -210,6 +217,15 @@ impl Board {
     /// BD-R-010 — tasks with the given status, in manual order (BD-R-030).
     pub fn tasks_in(&self, status: Status) -> impl Iterator<Item = &Task> {
         self.tasks.iter().filter(move |t| t.status == status)
+    }
+
+    /// UI-R-060 — tasks with the given status that also pass the active filter
+    /// (all of them when no filter is set). This is the set the board view and
+    /// focus navigation see; `tasks_in` (and label coloring, `UI-R-014`) still
+    /// range over every task.
+    pub fn visible_tasks_in(&self, status: Status) -> impl Iterator<Item = &Task> {
+        self.tasks_in(status)
+            .filter(move |t| self.filter.as_ref().is_none_or(|f| f.matches(t)))
     }
 
     /// UI-R-014 — label badge colors: first-seen order across this board's

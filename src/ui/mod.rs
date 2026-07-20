@@ -12,6 +12,7 @@ use ratatui::{
 };
 
 use crate::app::App;
+use crate::filter::Filter;
 use crate::model::{Board, Status};
 
 /// UI-R-002 — top-to-bottom: board tab bar, three-column board area, command line.
@@ -22,12 +23,27 @@ pub fn render(frame: &mut Frame, app: &App) {
         .buffer_mut()
         .set_style(area, Style::default().bg(COLOR_SCHEME.bg));
 
-    let [tabs_area, board_area, cmd_area] = Layout::vertical([
-        Constraint::Length(1),
-        Constraint::Min(1),
-        Constraint::Length(1),
-    ])
-    .areas(area);
+    // UI-R-002, UI-R-061 — the filter-status row exists only when the active
+    // board has a filter; otherwise the board area reclaims its height.
+    let active_filter = app.boards.get(app.active).and_then(|b| b.filter.as_ref());
+    let (tabs_area, board_area, filter_area, cmd_area) = if active_filter.is_some() {
+        let [tabs, board, filter, cmd] = Layout::vertical([
+            Constraint::Length(1),
+            Constraint::Min(1),
+            Constraint::Length(1),
+            Constraint::Length(1),
+        ])
+        .areas(area);
+        (tabs, board, Some(filter), cmd)
+    } else {
+        let [tabs, board, cmd] = Layout::vertical([
+            Constraint::Length(1),
+            Constraint::Min(1),
+            Constraint::Length(1),
+        ])
+        .areas(area);
+        (tabs, board, None, cmd)
+    };
 
     let mut tabs_state = app.tabs_state();
     let tabs = ScrollingTabsBuilder::default()
@@ -56,6 +72,10 @@ pub fn render(frame: &mut Frame, app: &App) {
                 app.focus.id,
             );
         }
+    }
+
+    if let (Some(filter_area), Some(filter)) = (filter_area, active_filter) {
+        render_filter_status(frame, filter_area, filter);
     }
 
     render_cmdline(
@@ -113,6 +133,22 @@ fn render_cmdline(
         ),
     };
     frame.render_widget(ratatui::widgets::Paragraph::new(text).style(style), area);
+}
+
+/// UI-R-061 — a one-row filter-status line showing the active filter's
+/// condition text, centered, white on blue, between the board and command line.
+fn render_filter_status(frame: &mut Frame, area: Rect, filter: &Filter) {
+    let style = Style::default()
+        .bg(COLOR_SCHEME.hi_bg)
+        .fg(ratatui::style::Color::White);
+    frame.buffer_mut().set_style(area, style);
+    let text = format!("Filter: {}", filter.describe());
+    frame.render_widget(
+        ratatui::widgets::Paragraph::new(text)
+            .style(style)
+            .alignment(ratatui::layout::Alignment::Center),
+        area,
+    );
 }
 
 /// UI-R-054 — while command-line mode is active, list the available
@@ -195,7 +231,9 @@ fn render_column(
     focused_id: Option<u64>,
 ) {
     let is_focused_column = status == focused_column;
-    let tasks: Vec<&crate::model::Task> = board.tasks_in(status).collect();
+    // UI-R-060 — only cards passing the active filter are drawn; label colors
+    // (UI-R-014) still range over every task via `label_colors`.
+    let tasks: Vec<&crate::model::Task> = board.visible_tasks_in(status).collect();
     let label_colors = board.label_colors();
 
     let border_style = if is_focused_column {
@@ -333,5 +371,71 @@ mod tests {
             .map(|c| c.symbol())
             .collect();
         assert!(out.contains("URGENT"));
+    }
+
+    fn rendered_text(a: &App) -> String {
+        let backend = TestBackend::new(80, 24);
+        let mut terminal = Terminal::new(backend).unwrap();
+        terminal.draw(|f| render(f, a)).unwrap();
+        terminal
+            .backend()
+            .buffer()
+            .content()
+            .iter()
+            .map(|c| c.symbol())
+            .collect()
+    }
+
+    /// UI-R-061
+    /// UI-R-002
+    #[test]
+    fn ut_filter_status_row_shown_only_when_filter_active() {
+        let mut a = app();
+        a.boards[0].create_task("Fix bug", Status::Open);
+        assert!(!rendered_text(&a).contains("Filter:"));
+
+        a.boards[0].filter = Filter::parse("label=bug").unwrap();
+        assert!(rendered_text(&a).contains("Filter: label=bug"));
+    }
+
+    /// UI-R-061 — the filter row is white on blue and its text is centered.
+    #[test]
+    fn ut_filter_status_row_styled_and_centered() {
+        let mut a = app();
+        a.boards[0].create_task("Fix bug", Status::Open);
+        a.boards[0].filter = Filter::parse("label=bug").unwrap();
+
+        let backend = TestBackend::new(80, 24);
+        let mut terminal = Terminal::new(backend).unwrap();
+        terminal.draw(|f| render(f, &a)).unwrap();
+        let buf = terminal.backend().buffer();
+        // Filter row sits directly above the one-row command line.
+        let row = buf.area.height - 2;
+
+        // The whole row is white on blue.
+        let cell = &buf[(0, row)];
+        assert_eq!(cell.bg, COLOR_SCHEME.hi_bg);
+        assert_eq!(cell.fg, ratatui::style::Color::White);
+
+        // Centered: the text does not start in column 0.
+        let line: String = (0..buf.area.width)
+            .map(|x| buf[(x, row)].symbol())
+            .collect();
+        assert!(line.trim() == "Filter: label=bug");
+        assert!(line.starts_with(' '), "centered text is left-padded");
+    }
+
+    /// UI-R-060
+    #[test]
+    fn ut_filtered_out_card_not_rendered() {
+        let mut a = app();
+        let id = a.boards[0].create_task("Fix bug", Status::Open);
+        a.boards[0].task_mut(id).unwrap().labels = vec!["bug".to_string()];
+        a.boards[0].create_task("Write docs", Status::Open);
+
+        a.boards[0].filter = Filter::parse("label=bug").unwrap();
+        let out = rendered_text(&a);
+        assert!(out.contains("Fix bug"));
+        assert!(!out.contains("Write docs"));
     }
 }
