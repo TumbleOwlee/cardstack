@@ -43,8 +43,8 @@ centered.
 
 **UI-R-011** — Each task shall render as a multi-line bordered card with a
 1-cell horizontal margin around its content: the title in bold on the first
-row, the description (non-bold, wrapped over multiple rows) below it, a
-labels row below that (`UI-R-014`) if the task has any labels, and a footer
+row, a labels row below that (`UI-R-014`) if the task has any labels, the
+description (non-bold, wrapped over multiple rows) below that, and a footer
 row with the category name at the bottom-left and the due date at the
 bottom-right (each only if present). The category name renders in uppercase as a bold badge
 with its category color as the background and black or white foreground text,
@@ -62,7 +62,7 @@ default border color (`BD-R-044`).
 due date renders in the default text color.
 
 **UI-R-014** — A task with one or more labels (`BD-R-010`) renders a labels
-row directly below the description: each label as an uppercase badge
+row directly below the title, above the description: each label as an uppercase badge
 (rendered ` LABEL `, a 1-cell space margin either side of the text, no
 brackets — same shape as `UI-R-011`'s category badge), space-separated from
 its neighbors, with a background color and black-or-white foreground text
