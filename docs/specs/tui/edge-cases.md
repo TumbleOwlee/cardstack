@@ -29,3 +29,19 @@ stored. Deleting or editing away the only task using an earlier-occurring
 label shifts the first-seen index of every label after it, which can change
 their rendered color within the same session. Accepted: no persisted
 label→color table exists in the MVP.
+
+**Filter does not affect label colors.** An active filter (`UI-R-060`) hides
+cards from the view but label badge colors (`UI-R-014`) are still computed over
+**all** of the board's tasks, not just the visible ones. A card's label colors
+therefore do not shift when a filter is applied or cleared. Accepted: filtering
+is a pure view concern and must not perturb the label→color mapping.
+
+**Filter hiding the focused card.** When applying a filter (`UI-R-060`) hides
+the currently focused card, focus resyncs to the first still-visible card —
+preferring the focused column, then falling back so focus lands on some visible
+card if one exists. If the filter empties the focused column entirely, that
+column has no focused card (`UI-R-020`), consistent with an empty column.
+
+**Filter matching nothing.** A filter whose condition matches no task renders
+the columns empty rather than surfacing an error or refusing the filter — the
+same as a board with no matching tasks. Clearing the filter restores the cards.

@@ -14,7 +14,16 @@ and shall not change without a spec change.
 | Swap tabs | `:swap <i> <j>` | Swaps the tab positions of boards `<i>` and `<j>` (`UI-R-058`) |
 | Delete board | `:delete` | Opens a confirm dialog, then deletes the active board (`UI-R-059`) |
 | Manage categories | `:categories` | Opens the category-management dialog (`UI-R-043`) |
+| Filter cards | `:filter <condition>` | Restricts visible cards by category/label (`UI-R-060`) |
+| Clear filter | `:filter` / `:filter clear` | Clears the active board's filter (`UI-R-060`) |
 | Quit | `:q` | Exits the application |
+
+`<condition>` for `:filter` is a space-separated set of `key=value` terms, keys
+`category` and `label`, each at most once, combined with AND, e.g.
+`:filter category=work label=bug`. A `label=` value is a single label, an
+`&`-joined list (all present) or a `|`-joined list (any present), e.g.
+`label=bug&urgent` or `label=bug|urgent`; `&` and `|` may not be mixed. Matching
+is case-insensitive (`UI-R-060`).
 
 ## Keybindings — board view (no dialog open)
 
@@ -31,6 +40,7 @@ and shall not change without a spec change.
 | `Enter` | Open task detail dialog on focused card (`UI-R-040`) |
 | `d` | Open delete-confirmation dialog on focused card (`UI-R-042`) |
 | `:` | Enter command-line mode (`UI-R-050`) |
+| `Esc` | Clear the active board's filter, if one is set (`UI-R-060`); otherwise no-op |
 | `q` | Quit |
 
 ## Keybindings — board tab bar
