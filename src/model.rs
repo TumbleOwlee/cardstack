@@ -211,6 +211,25 @@ impl Board {
     pub fn tasks_in(&self, status: Status) -> impl Iterator<Item = &Task> {
         self.tasks.iter().filter(move |t| t.status == status)
     }
+
+    /// UI-R-014 — label badge colors: first-seen order across this board's
+    /// tasks, indexed into the same palette BD-R-041 uses for categories.
+    /// Recomputed fresh on every call; not persisted.
+    pub fn label_colors(&self) -> std::collections::HashMap<String, (u8, u8, u8)> {
+        let mut map = std::collections::HashMap::new();
+        for task in &self.tasks {
+            for label in &task.labels {
+                if !map.contains_key(label) {
+                    let idx = map.len();
+                    map.insert(
+                        label.clone(),
+                        CATEGORY_PALETTE[idx % CATEGORY_PALETTE.len()],
+                    );
+                }
+            }
+        }
+        map
+    }
 }
 
 #[cfg(test)]
@@ -332,5 +351,49 @@ mod tests {
         let first = b.categories[0].color;
         b.cycle_category_color("cat");
         assert_ne!(b.categories[0].color, first);
+    }
+
+    /// UI-R-014
+    #[test]
+    fn ut_label_colors_first_seen_order() {
+        let mut b = Board::new("b");
+        b.create_task("t1", Status::Open);
+        b.tasks[0].labels = vec!["bug".to_string()];
+        b.create_task("t2", Status::Open);
+        b.tasks[1].labels = vec!["bug".to_string(), "urgent".to_string()];
+
+        let colors = b.label_colors();
+        assert_eq!(colors["bug"], CATEGORY_PALETTE[0]);
+        assert_eq!(colors["urgent"], CATEGORY_PALETTE[1]);
+    }
+
+    /// UI-R-014
+    #[test]
+    fn ut_label_colors_cycles_palette_when_exhausted() {
+        let mut b = Board::new("b");
+        b.create_task("t", Status::Open);
+        b.tasks[0].labels = (0..CATEGORY_PALETTE.len() + 1)
+            .map(|i| format!("label{i}"))
+            .collect();
+
+        let colors = b.label_colors();
+        assert_eq!(
+            colors[&format!("label{}", CATEGORY_PALETTE.len())],
+            CATEGORY_PALETTE[0]
+        );
+    }
+
+    /// UI-R-014
+    #[test]
+    fn ut_label_colors_scoped_per_board() {
+        let mut a = Board::new("a");
+        a.create_task("t", Status::Open);
+        a.tasks[0].labels = vec!["x".to_string(), "shared".to_string()];
+
+        let mut b = Board::new("b");
+        b.create_task("t", Status::Open);
+        b.tasks[0].labels = vec!["shared".to_string()];
+
+        assert_ne!(a.label_colors()["shared"], b.label_colors()["shared"]);
     }
 }
