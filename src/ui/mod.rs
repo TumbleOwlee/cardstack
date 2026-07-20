@@ -136,14 +136,17 @@ fn render_cmdline(
 }
 
 /// UI-R-061 — a one-row filter-status line showing the active filter's
-/// condition text, drawn between the board area and the command line.
+/// condition text, centered, white on blue, between the board and command line.
 fn render_filter_status(frame: &mut Frame, area: Rect, filter: &Filter) {
-    frame
-        .buffer_mut()
-        .set_style(area, Style::default().bg(COLOR_SCHEME.bg));
+    let style = Style::default()
+        .bg(ratatui::style::Color::Blue)
+        .fg(ratatui::style::Color::White);
+    frame.buffer_mut().set_style(area, style);
     let text = format!("Filter: {}", filter.describe());
     frame.render_widget(
-        ratatui::widgets::Paragraph::new(text).style(Style::default().fg(COLOR_SCHEME.hi)),
+        ratatui::widgets::Paragraph::new(text)
+            .style(style)
+            .alignment(ratatui::layout::Alignment::Center),
         area,
     );
 }
@@ -393,6 +396,33 @@ mod tests {
 
         a.boards[0].filter = Filter::parse("label=bug").unwrap();
         assert!(rendered_text(&a).contains("Filter: label=bug"));
+    }
+
+    /// UI-R-061 — the filter row is white on blue and its text is centered.
+    #[test]
+    fn ut_filter_status_row_styled_and_centered() {
+        let mut a = app();
+        a.boards[0].create_task("Fix bug", Status::Open);
+        a.boards[0].filter = Filter::parse("label=bug").unwrap();
+
+        let backend = TestBackend::new(80, 24);
+        let mut terminal = Terminal::new(backend).unwrap();
+        terminal.draw(|f| render(f, &a)).unwrap();
+        let buf = terminal.backend().buffer();
+        // Filter row sits directly above the one-row command line.
+        let row = buf.area.height - 2;
+
+        // The whole row is white on blue.
+        let cell = &buf[(0, row)];
+        assert_eq!(cell.bg, ratatui::style::Color::Blue);
+        assert_eq!(cell.fg, ratatui::style::Color::White);
+
+        // Centered: the text does not start in column 0.
+        let line: String = (0..buf.area.width)
+            .map(|x| buf[(x, row)].symbol())
+            .collect();
+        assert!(line.trim() == "Filter: label=bug");
+        assert!(line.starts_with(' '), "centered text is left-padded");
     }
 
     /// UI-R-060
