@@ -109,8 +109,8 @@ fn is_overdue(task: &Task, today: NaiveDate) -> bool {
 /// UI-R-011 — render one task as a bordered card: bold title on row one,
 /// wrapped description below it, category (bottom-left) and due date
 /// (bottom-right) on the footer row.
-/// UI-R-014 — a labels row (wrapped, badge-styled) between the title and the
-/// description, present only when the task has labels.
+/// UI-R-014 — a labels row (wrapped, badge-styled) as the card's first row,
+/// above the title, present only when the task has labels.
 /// UI-R-023 — the focused card gets a distinct border, keeping its category color.
 /// UI-R-055 — fill the card's interior with the theme background before content.
 pub fn render(
@@ -144,9 +144,9 @@ pub fn render(
 
     let label_rows = label_lines(&task.labels, inner.width);
 
-    let [title_a, labels_a, desc_a, footer_a] = Layout::vertical([
-        Constraint::Length(1),
+    let [labels_a, title_a, desc_a, footer_a] = Layout::vertical([
         Constraint::Length(label_rows.len() as u16),
+        Constraint::Length(1),
         Constraint::Min(1),
         Constraint::Length(1),
     ])
