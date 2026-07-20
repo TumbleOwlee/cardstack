@@ -20,10 +20,12 @@ and shall not change without a spec change.
 
 `<condition>` for `:filter` is a space-separated set of `key=value` terms, keys
 `category` and `label`, each at most once, combined with AND, e.g.
-`:filter category=work label=bug`. A `label=` value is a single label, an
-`&`-joined list (all present) or a `|`-joined list (any present), e.g.
-`label=bug&urgent` or `label=bug|urgent`; `&` and `|` may not be mixed. Matching
-is case-insensitive (`UI-R-060`).
+`:filter category=work label=bug`. A `category=` value is a single name or a
+`|`-joined list (any present), e.g. `category=support|enbas`; `&` is not valid
+for `category`. A `label=` value is a single label, an `&`-joined list (all
+present) or a `|`-joined list (any present), e.g. `label=bug&urgent` or
+`label=bug|urgent`; `&` and `|` may not be mixed. Matching is case-insensitive
+(`UI-R-060`).
 
 ## Keybindings — board view (no dialog open)
 

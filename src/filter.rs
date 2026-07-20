@@ -16,7 +16,9 @@ enum LabelExpr {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Filter {
     raw: String,
-    category: Option<String>,
+    /// `|`-separated category names (OR), lowercased. A task has at most one
+    /// category, so `&` is not allowed here.
+    category: Option<Vec<String>>,
     labels: Option<LabelExpr>,
 }
 
@@ -31,7 +33,7 @@ impl Filter {
             return Ok(None);
         }
 
-        let mut category: Option<String> = None;
+        let mut category: Option<Vec<String>> = None;
         let mut labels: Option<LabelExpr> = None;
 
         for term in trimmed.split_whitespace() {
@@ -44,7 +46,16 @@ impl Filter {
                     if category.is_some() {
                         return Err(());
                     }
-                    category = Some(value.to_lowercase());
+                    // A task has at most one category, so `&` is meaningless
+                    // here; only `|` (OR) or a single name is valid.
+                    if value.contains('&') {
+                        return Err(());
+                    }
+                    let names: Vec<String> = value.split('|').map(|p| p.to_lowercase()).collect();
+                    if names.iter().any(|p| p.is_empty()) {
+                        return Err(());
+                    }
+                    category = Some(names);
                 }
                 "label" => {
                     if labels.is_some() {
@@ -66,9 +77,9 @@ impl Filter {
     /// UI-R-060 — a task matches when it satisfies every present term (category
     /// AND label). Comparisons are case-insensitive.
     pub fn matches(&self, task: &Task) -> bool {
-        if let Some(cat) = &self.category {
+        if let Some(cats) = &self.category {
             match &task.category {
-                Some(tc) if tc.to_lowercase() == *cat => {}
+                Some(tc) if cats.contains(&tc.to_lowercase()) => {}
                 _ => return false,
             }
         }
@@ -149,6 +160,16 @@ mod tests {
         assert!(!f.matches(&task(None, &[])));
     }
 
+    /// UI-R-060 — a `|` category list matches any of the listed categories.
+    #[test]
+    fn ut_match_category_or() {
+        let f = Filter::parse("category=support|enbas").unwrap().unwrap();
+        assert!(f.matches(&task(Some("support"), &[])));
+        assert!(f.matches(&task(Some("ENBAS"), &[])));
+        assert!(!f.matches(&task(Some("other"), &[])));
+        assert!(!f.matches(&task(None, &[])));
+    }
+
     /// UI-R-060 — a single-label term matches any task carrying that label.
     #[test]
     fn ut_parse_and_match_single_label() {
@@ -189,6 +210,8 @@ mod tests {
     #[test]
     fn ut_parse_rejects_invalid() {
         assert_eq!(Filter::parse("label=a&b|c"), Err(()));
+        assert_eq!(Filter::parse("category=a&b"), Err(()));
+        assert_eq!(Filter::parse("category=a|"), Err(()));
         assert_eq!(Filter::parse("foo=bar"), Err(()));
         assert_eq!(Filter::parse("category="), Err(()));
         assert_eq!(Filter::parse("label=a&"), Err(()));

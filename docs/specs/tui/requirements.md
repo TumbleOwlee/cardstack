@@ -212,7 +212,9 @@ colorized by its category (`UI-R-012`) regardless of focus.
 **UI-R-060** — `:filter <condition>` shall restrict the visible cards of the
 active board to those matching `<condition>`. A condition is a space-separated
 set of `key=value` terms with keys `category` and `label`, each appearing at
-most once. `category=<name>` matches a task whose category equals `<name>`.
+most once. `category=<expr>` matches a task whose category equals **any** of the
+`|`-separated names in `<expr>`; `&` is not valid in a `category` value — a task
+has at most one category (`BD-R-010`) — and such a condition is an error.
 `label=<expr>` matches against a task's labels, where `<expr>` is a single
 label, an `&`-separated list (the task must carry **all** listed labels), or a
 `|`-separated list (the task must carry **any** listed label); `&` and `|` shall
