@@ -230,6 +230,6 @@ error (`UI-R-051`) and leave any existing filter unchanged.
 **UI-R-061** — While the active board has a filter (`UI-R-060`), a one-row
 filter-status line shall be shown between the board area and the command line,
 displaying the active filter's condition text centered on the row in white on
-the theme's highlight blue — the same color used for the focused column border
-and the active tab (`UI-R-023`); when no filter is active the row is not shown
-and the board area reclaims its height (`UI-R-002`).
+the same background the active board tab uses (the theme's highlight background,
+`UI-R-004`); when no filter is active the row is not shown and the board area
+reclaims its height (`UI-R-002`).
