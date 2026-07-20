@@ -13,6 +13,8 @@ made of cards, driven entirely from the keyboard.
 - Multiple boards, switchable via tabs, with manual and persisted tab order
 - A `:` command line for board/category management, alongside direct
   keybindings for everything else
+- Filter the board by category and/or label — with AND/OR label combos — via
+  `:filter`, with the active filter shown at a glance
 - Autosave on every change — no explicit save, no unsaved-state to lose
 
 ## Install / run
@@ -40,6 +42,7 @@ instance refuses to start while the config directory is locked.
 | `Enter` | Open the focused card |
 | `d` | Delete the focused card (with confirmation) |
 | `:` | Enter command mode |
+| `Esc` | Clear the active filter, if one is set |
 | `q` | Quit |
 
 ### Board tabs
@@ -67,7 +70,15 @@ instance refuses to start while the config directory is locked.
 | `:swap <i> <j>` | Swap the tab positions of two boards |
 | `:delete` | Delete the active board (with confirmation) |
 | `:categories` | Open the category-management dialog |
+| `:filter <condition>` | Filter cards by category/label (blank or `:filter clear` clears) |
 | `:q` | Quit |
+
+`:filter` conditions are space-separated `key=value` terms — `category=<name>`
+and `label=<name>`, each at most once, ANDed together. A value may list
+alternatives with `|` (any match), e.g. `category=work|home`; a `label=` value
+may instead use `&` for "all present", e.g. `label=bug&urgent`. `&` and `|`
+can't be mixed in one value. Matching is case-insensitive. `:filter`,
+`:filter clear`, or `Esc` clears the active board's filter.
 
 See [`docs/specs/tui/api-contract.md`](./docs/specs/tui/api-contract.md) for
 the full, authoritative keybinding/command reference.
