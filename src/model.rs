@@ -211,6 +211,26 @@ impl Board {
     pub fn tasks_in(&self, status: Status) -> impl Iterator<Item = &Task> {
         self.tasks.iter().filter(move |t| t.status == status)
     }
+
+    /// UI-R-014 — label badge colors: first-seen order across this board's
+    /// tasks, compared case-insensitively, indexed into the same palette
+    /// BD-R-041 uses for categories but walked in reverse order. Recomputed
+    /// fresh on every call; not persisted. Keyed by lowercased label text —
+    /// look up with the same lowercasing.
+    pub fn label_colors(&self) -> std::collections::HashMap<String, (u8, u8, u8)> {
+        let mut map = std::collections::HashMap::new();
+        for task in &self.tasks {
+            for label in &task.labels {
+                let key = label.to_lowercase();
+                if !map.contains_key(&key) {
+                    let idx = map.len();
+                    let rev_idx = CATEGORY_PALETTE.len() - 1 - (idx % CATEGORY_PALETTE.len());
+                    map.insert(key, CATEGORY_PALETTE[rev_idx]);
+                }
+            }
+        }
+        map
+    }
 }
 
 #[cfg(test)]
@@ -332,5 +352,68 @@ mod tests {
         let first = b.categories[0].color;
         b.cycle_category_color("cat");
         assert_ne!(b.categories[0].color, first);
+    }
+
+    /// UI-R-014
+    #[test]
+    fn ut_label_colors_first_seen_order() {
+        let mut b = Board::new("b");
+        b.create_task("t1", Status::Open);
+        b.tasks[0].labels = vec!["bug".to_string()];
+        b.create_task("t2", Status::Open);
+        b.tasks[1].labels = vec!["bug".to_string(), "urgent".to_string()];
+
+        let colors = b.label_colors();
+        let last = CATEGORY_PALETTE.len() - 1;
+        assert_eq!(colors["bug"], CATEGORY_PALETTE[last]);
+        assert_eq!(colors["urgent"], CATEGORY_PALETTE[last - 1]);
+    }
+
+    /// UI-R-014
+    #[test]
+    fn ut_label_colors_cycles_palette_when_exhausted() {
+        let mut b = Board::new("b");
+        b.create_task("t", Status::Open);
+        b.tasks[0].labels = (0..CATEGORY_PALETTE.len() + 1)
+            .map(|i| format!("label{i}"))
+            .collect();
+
+        let colors = b.label_colors();
+        let last = CATEGORY_PALETTE.len() - 1;
+        assert_eq!(
+            colors[&format!("label{}", CATEGORY_PALETTE.len())],
+            CATEGORY_PALETTE[last]
+        );
+    }
+
+    /// UI-R-014
+    #[test]
+    fn ut_label_colors_scoped_per_board() {
+        let mut a = Board::new("a");
+        a.create_task("t", Status::Open);
+        a.tasks[0].labels = vec!["x".to_string(), "shared".to_string()];
+
+        let mut b = Board::new("b");
+        b.create_task("t", Status::Open);
+        b.tasks[0].labels = vec!["shared".to_string()];
+
+        assert_ne!(a.label_colors()["shared"], b.label_colors()["shared"]);
+    }
+
+    /// UI-R-014
+    #[test]
+    fn ut_label_colors_case_insensitive() {
+        let mut b = Board::new("b");
+        b.create_task("t1", Status::Open);
+        b.tasks[0].labels = vec!["Something".to_string()];
+        b.create_task("t2", Status::Open);
+        b.tasks[1].labels = vec!["SomeThing".to_string(), "other".to_string()];
+
+        let colors = b.label_colors();
+        let last = CATEGORY_PALETTE.len() - 1;
+        // Only 2 distinct labels once case-folded: "something" and "other".
+        assert_eq!(colors.len(), 2);
+        assert_eq!(colors["something"], CATEGORY_PALETTE[last]);
+        assert_eq!(colors["other"], CATEGORY_PALETTE[last - 1]);
     }
 }

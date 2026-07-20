@@ -74,5 +74,5 @@ that reference.
 on every task that referenced it — a task is never removed as a side effect of
 category deletion.
 
-**BD-R-044** — A task with no category set shall render with no category color
-(the theme's default border/text color), not an error state.
+**BD-R-044** — A task with no category set shall render its card border and
+title in white, not an error state.

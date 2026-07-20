@@ -42,23 +42,46 @@ the scroll position are simply not drawn, not truncated. Column titles are
 centered.
 
 **UI-R-011** — Each task shall render as a multi-line bordered card with a
-1-cell horizontal margin around its content: the title in bold on the first
-row, the description (non-bold, wrapped over multiple rows) below it, and a
-footer row with the category name at the bottom-left and the due date at the
-bottom-right (each only if present). The category name renders in uppercase as a bold badge
+1-cell horizontal margin around its content: a labels row first (`UI-R-014`)
+if the task has any labels, followed by a blank row (only when the labels row
+is present), the title in bold below that, the description (non-bold, wrapped
+over multiple rows) below that if the description is non-empty (an empty
+description renders no row and adds no height), then a footer row with the
+category name at the bottom-left and the due date at the bottom-right,
+present only if the task has a category or a due date (a task with neither
+renders no footer row and no gap before it); when the footer row is present,
+a blank row separates it from whatever is above (the description if present,
+otherwise the title). The category name renders in uppercase as a bold badge
 with its category color as the background and black or white foreground text,
 whichever has higher contrast against that background. A card's height is not
-fixed: it grows to fit however many rows its description wraps to at the
-column's width (minimum one description row), so no description text is ever
-clipped.
+fixed: it grows to fit however many rows its description and labels wrap to
+at the column's width, so no description or label text is ever clipped.
 
 **UI-R-012** — A card's border and title shall be colorized using its task's
-category color (`BD-R-040`); a task with no category renders with the theme's
-default border color (`BD-R-044`).
+category color (`BD-R-040`); a task with no category renders in white
+(`BD-R-044`).
 
 **UI-R-013** — A card whose due date is in the past and whose status is not
-`Done` shall render its due-date text in the theme's error color; every other
-due date renders in the default text color.
+`Done` shall render its due-date text in the theme's error color. A due date
+that is today (regardless of status) renders in yellow. Every other due date
+renders in the default text color.
+
+**UI-R-014** — A task with one or more labels (`BD-R-010`) renders a labels
+row as the card's first row, above the title: each label as an uppercase badge
+(rendered ` LABEL `, a 1-cell space margin either side of the text, no
+brackets — same shape as `UI-R-011`'s category badge), space-separated from
+its neighbors, with a background color and black-or-white foreground text
+chosen by the same contrast rule as `UI-R-011`'s category badge. Badge colors
+are assigned by each label's first-seen position among the active board's
+tasks (in board task order), comparing labels case-insensitively so e.g.
+`Something` and `SomeThing` are the same label for coloring purposes,
+indexed into the same fixed palette `BD-R-041` uses for categories but
+walked in reverse order, cycling if there are more distinct labels than
+palette entries; this mapping is recomputed on every render and is not
+persisted. The labels row wraps to as many rows as needed,
+using the same greedy word-wrap as the description — no label is ever
+hidden. A task with no labels renders
+no labels row and adds no height.
 
 ## Focus & navigation
 

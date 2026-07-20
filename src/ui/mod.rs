@@ -196,6 +196,7 @@ fn render_column(
 ) {
     let is_focused_column = status == focused_column;
     let tasks: Vec<&crate::model::Task> = board.tasks_in(status).collect();
+    let label_colors = board.label_colors();
 
     let border_style = if is_focused_column {
         Style::default()
@@ -243,7 +244,7 @@ fn render_column(
         }
         let card_area = Rect::new(inner.x, y, inner.width, *height);
         let focused = is_focused_column && focused_id == Some(task.id);
-        card::render(frame, card_area, task, board, today, focused);
+        card::render(frame, card_area, task, board, &label_colors, today, focused);
         y += height;
     }
 }
@@ -313,5 +314,24 @@ mod tests {
         let last_row = terminal.backend().buffer().area.height - 1;
         let cell = &terminal.backend().buffer()[(0, last_row)];
         assert_eq!(cell.fg, COLOR_SCHEME.error);
+    }
+
+    /// UI-R-014
+    #[test]
+    fn ut_board_render_shows_task_label() {
+        let mut a = app();
+        let id = a.boards[0].create_task("Fix bug", Status::Open);
+        a.boards[0].task_mut(id).unwrap().labels = vec!["urgent".to_string()];
+        let backend = TestBackend::new(80, 24);
+        let mut terminal = Terminal::new(backend).unwrap();
+        terminal.draw(|f| render(f, &a)).unwrap();
+        let out: String = terminal
+            .backend()
+            .buffer()
+            .content()
+            .iter()
+            .map(|c| c.symbol())
+            .collect();
+        assert!(out.contains("URGENT"));
     }
 }
