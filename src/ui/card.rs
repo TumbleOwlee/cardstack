@@ -209,7 +209,7 @@ pub fn render(
                 spans.push(Span::raw(" "));
             }
             let label_color = label_colors
-                .get(label.as_str())
+                .get(&label.to_lowercase())
                 .map(|&(r, g, b)| Color::Rgb(r, g, b))
                 .unwrap_or(COLOR_SCHEME.border);
             spans.push(Span::styled(

@@ -213,16 +213,19 @@ impl Board {
     }
 
     /// UI-R-014 — label badge colors: first-seen order across this board's
-    /// tasks, indexed into the same palette BD-R-041 uses for categories but
-    /// walked in reverse order. Recomputed fresh on every call; not persisted.
+    /// tasks, compared case-insensitively, indexed into the same palette
+    /// BD-R-041 uses for categories but walked in reverse order. Recomputed
+    /// fresh on every call; not persisted. Keyed by lowercased label text —
+    /// look up with the same lowercasing.
     pub fn label_colors(&self) -> std::collections::HashMap<String, (u8, u8, u8)> {
         let mut map = std::collections::HashMap::new();
         for task in &self.tasks {
             for label in &task.labels {
-                if !map.contains_key(label) {
+                let key = label.to_lowercase();
+                if !map.contains_key(&key) {
                     let idx = map.len();
                     let rev_idx = CATEGORY_PALETTE.len() - 1 - (idx % CATEGORY_PALETTE.len());
-                    map.insert(label.clone(), CATEGORY_PALETTE[rev_idx]);
+                    map.insert(key, CATEGORY_PALETTE[rev_idx]);
                 }
             }
         }
@@ -395,5 +398,22 @@ mod tests {
         b.tasks[0].labels = vec!["shared".to_string()];
 
         assert_ne!(a.label_colors()["shared"], b.label_colors()["shared"]);
+    }
+
+    /// UI-R-014
+    #[test]
+    fn ut_label_colors_case_insensitive() {
+        let mut b = Board::new("b");
+        b.create_task("t1", Status::Open);
+        b.tasks[0].labels = vec!["Something".to_string()];
+        b.create_task("t2", Status::Open);
+        b.tasks[1].labels = vec!["SomeThing".to_string(), "other".to_string()];
+
+        let colors = b.label_colors();
+        let last = CATEGORY_PALETTE.len() - 1;
+        // Only 2 distinct labels once case-folded: "something" and "other".
+        assert_eq!(colors.len(), 2);
+        assert_eq!(colors["something"], CATEGORY_PALETTE[last]);
+        assert_eq!(colors["other"], CATEGORY_PALETTE[last - 1]);
     }
 }
