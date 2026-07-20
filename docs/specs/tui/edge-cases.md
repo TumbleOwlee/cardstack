@@ -22,3 +22,10 @@ away from the add/rename input (`UI-R-043`) discards whatever was typed and
 resets the field to empty add-mode, rather than preserving a half-finished
 rename for later. `Esc` still closes the whole category dialog outright
 (`UI-R-044`), same as it discards a pending add.
+
+**Label color reassignment on deletion.** Label badge colors (`UI-R-014`) are
+derived live from first-seen order across the active board's tasks, not
+stored. Deleting or editing away the only task using an earlier-occurring
+label shifts the first-seen index of every label after it, which can change
+their rendered color within the same session. Accepted: no persisted
+label→color table exists in the MVP.
