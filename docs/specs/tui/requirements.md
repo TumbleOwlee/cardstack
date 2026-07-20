@@ -45,10 +45,11 @@ centered.
 1-cell horizontal margin around its content: a labels row first (`UI-R-014`)
 if the task has any labels, followed by a blank row (only when the labels row
 is present), the title in bold below that, the description (non-bold, wrapped
-over multiple rows) below that, a blank row (only when the footer row below
-has any content), then a footer row with the category name at the
-bottom-left and the due date at the bottom-right (each only if present). The
-category name renders in uppercase as a bold badge
+over multiple rows) below that, then a footer row with the category name at
+the bottom-left and the due date at the bottom-right, present only if the
+task has a category or a due date (a task with neither renders no footer row
+and no gap before it); when the footer row is present, a blank row separates
+it from the description above. The category name renders in uppercase as a bold badge
 with its category color as the background and black or white foreground text,
 whichever has higher contrast against that background. A card's height is not
 fixed: it grows to fit however many rows its description and labels wrap to

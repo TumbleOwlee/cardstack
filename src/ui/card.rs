@@ -15,8 +15,8 @@ use unicode_width::UnicodeWidthStr;
 use super::contrasting_text;
 use crate::model::{Board, Task};
 
-/// Non-content rows: top+bottom border, title row, footer row.
-const CARD_FIXED_ROWS: u16 = 4;
+/// Non-content rows: top+bottom border, title row.
+const CARD_FIXED_ROWS: u16 = 3;
 
 /// UI-R-011 — count how many rows `text` wraps to at `width` columns
 /// (greedy word-wrap, matching `Paragraph`'s `Wrap { trim: false }`).
@@ -89,13 +89,10 @@ pub fn card_height(width: u16, task: &Task) -> u16 {
     let label_rows = label_lines(&task.labels, content_width).len() as u16;
     // UI-R-011 — a blank row follows the labels row, only when it's present.
     let label_gap = if label_rows > 0 { 1 } else { 0 };
-    // UI-R-011 — a blank row precedes the footer, only when it has content.
-    let footer_gap = if task.category.is_some() || task.due_date.is_some() {
-        1
-    } else {
-        0
-    };
-    CARD_FIXED_ROWS + desc_lines + label_rows + label_gap + footer_gap
+    // UI-R-011 — footer row (plus its lead-in gap) only when it has content.
+    let has_footer = task.category.is_some() || task.due_date.is_some();
+    let footer_rows = if has_footer { 2 } else { 0 };
+    CARD_FIXED_ROWS + desc_lines + label_rows + label_gap + footer_rows
 }
 
 /// BD-R-040, UI-R-012 — a task's card color: its category's color, or white
@@ -152,11 +149,8 @@ pub fn render(
 
     let label_rows = label_lines(&task.labels, inner.width);
     let label_gap: u16 = if label_rows.is_empty() { 0 } else { 1 };
-    let footer_gap: u16 = if task.category.is_some() || task.due_date.is_some() {
-        1
-    } else {
-        0
-    };
+    let has_footer = task.category.is_some() || task.due_date.is_some();
+    let footer_len: u16 = if has_footer { 1 } else { 0 };
 
     let [
         labels_a,
@@ -170,8 +164,8 @@ pub fn render(
         Constraint::Length(label_gap),
         Constraint::Length(1),
         Constraint::Min(1),
-        Constraint::Length(footer_gap),
-        Constraint::Length(1),
+        Constraint::Length(footer_len),
+        Constraint::Length(footer_len),
     ])
     .areas(inner);
 
@@ -336,18 +330,18 @@ mod tests {
 
     /// UI-R-011
     #[test]
-    fn ut_card_footer_gap_only_when_footer_has_content() {
+    fn ut_card_footer_row_and_gap_only_when_footer_has_content() {
         let empty = task("No category, no due date");
-        let without_gap = CARD_FIXED_ROWS + 1;
-        assert_eq!(card_height(30, &empty), without_gap);
+        let without_footer = CARD_FIXED_ROWS + 1;
+        assert_eq!(card_height(30, &empty), without_footer);
 
         let mut with_category = task("Has category");
         with_category.category = Some("cat".to_string());
-        assert_eq!(card_height(30, &with_category), without_gap + 1);
+        assert_eq!(card_height(30, &with_category), without_footer + 2);
 
         let mut with_due = task("Has due date");
         with_due.due_date = Some(NaiveDate::from_ymd_opt(2026, 1, 1).unwrap());
-        assert_eq!(card_height(30, &with_due), without_gap + 1);
+        assert_eq!(card_height(30, &with_due), without_footer + 2);
     }
 
     /// UI-R-014
