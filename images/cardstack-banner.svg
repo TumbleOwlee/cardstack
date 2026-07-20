@@ -1,0 +1,188 @@
+<svg width="1280" height="420" viewBox="0 0 1280 420" xmlns="http://www.w3.org/2000/svg" font-family="'JetBrains Mono','DejaVu Sans Mono','Cascadia Code',ui-monospace,monospace">
+  <!--
+    Cardstack banner.
+    Palette taken verbatim from ferrowl-ui vscode_dark COLOR_SCHEME:
+      bg #1E1E1E · text #D4D4D4 · text_hi #FFFFFF · border #6E7681
+      hi #569CD6 · hi_bg #04395E · error #F14C4C · success #89D185
+      warning #D19A66 · row0 #252526 · row1 #2D2D30 · comment #6A9955
+      string #CE9178 · object/teal #4EC9B0 · placeholder #808080
+  -->
+  <defs>
+    <linearGradient id="pageBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#181818"/>
+      <stop offset="1" stop-color="#121212"/>
+    </linearGradient>
+    <linearGradient id="titleBar" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2D2D30"/>
+      <stop offset="1" stop-color="#252526"/>
+    </linearGradient>
+    <linearGradient id="wordAccent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#569CD6"/>
+      <stop offset="1" stop-color="#4EC9B0"/>
+    </linearGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#000000" flood-opacity="0.45"/>
+    </filter>
+    <filter id="cardShadow" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000000" flood-opacity="0.40"/>
+    </filter>
+    <clipPath id="winClip"><rect x="40" y="34" width="1200" height="352" rx="12"/></clipPath>
+    <linearGradient id="heroPanel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2A2A2D"/>
+      <stop offset="1" stop-color="#202022"/>
+    </linearGradient>
+    <linearGradient id="panelFade" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#242426" stop-opacity="0"/>
+      <stop offset="1" stop-color="#1E1E1E" stop-opacity="0.92"/>
+    </linearGradient>
+  </defs>
+
+  <!-- page background -->
+  <rect width="1280" height="420" fill="url(#pageBg)"/>
+
+  <!-- terminal window -->
+  <g filter="url(#softShadow)">
+    <rect x="40" y="34" width="1200" height="352" rx="12" fill="#1E1E1E" stroke="#333338" stroke-width="1"/>
+  </g>
+
+  <g clip-path="url(#winClip)">
+    <!-- title bar -->
+    <rect x="40" y="34" width="1200" height="34" fill="url(#titleBar)"/>
+    <circle cx="64" cy="51" r="6" fill="#F14C4C"/>
+    <circle cx="84" cy="51" r="6" fill="#D19A66"/>
+    <circle cx="104" cy="51" r="6" fill="#89D185"/>
+    <text x="640" y="55" text-anchor="middle" font-size="13" fill="#808080" letter-spacing="0.5">~/.config/cardstack — cardstack</text>
+
+    <!-- tab bar (board tabs) -->
+    <g font-size="13">
+      <rect x="40" y="68" width="1200" height="30" fill="#252526"/>
+      <!-- active tab -->
+      <rect x="40" y="68" width="118" height="30" fill="#1E1E1E"/>
+      <rect x="40" y="68" width="118" height="2" fill="#569CD6"/>
+      <text x="99" y="88" text-anchor="middle" fill="#FFFFFF">Default</text>
+      <text x="210" y="88" text-anchor="middle" fill="#808080">Personal</text>
+      <text x="320" y="88" text-anchor="middle" fill="#808080">OSS</text>
+      <text x="1206" y="88" text-anchor="middle" fill="#6A9955">[ ] ⟶</text>
+    </g>
+
+    <!-- column headers -->
+    <g font-size="13" font-weight="bold" letter-spacing="1">
+      <text x="216" y="126" text-anchor="middle" fill="#569CD6">OPEN</text>
+      <text x="640" y="126" text-anchor="middle" fill="#D19A66">IN&#160;PROGRESS</text>
+      <text x="1064" y="126" text-anchor="middle" fill="#89D185">DONE</text>
+      <!-- counts -->
+      <text x="216" y="126" dx="34" fill="#808080" font-weight="normal">3</text>
+      <text x="640" y="126" dx="64" fill="#808080" font-weight="normal">2</text>
+      <text x="1064" y="126" dx="34" fill="#808080" font-weight="normal">2</text>
+    </g>
+    <!-- header underlines -->
+    <line x1="72" y1="138" x2="360" y2="138" stroke="#333338" stroke-width="1"/>
+    <line x1="496" y1="138" x2="784" y2="138" stroke="#333338" stroke-width="1"/>
+    <line x1="920" y1="138" x2="1208" y2="138" stroke="#333338" stroke-width="1"/>
+
+    <!-- ============ OPEN column (x 72..360) ============ -->
+    <!-- focused card: distinct thicker border, category color kept -->
+    <g filter="url(#cardShadow)">
+      <rect x="72" y="150" width="288" height="70" rx="6" fill="#252526" stroke="#569CD6" stroke-width="2"/>
+    </g>
+    <rect x="84" y="162" width="46" height="16" rx="3" fill="#569CD6"/>
+    <text x="107" y="174" text-anchor="middle" font-size="10" font-weight="bold" fill="#1E1E1E">FEAT</text>
+    <text x="88" y="199" font-size="13" fill="#FFFFFF">Wire up command palette</text>
+    <text x="88" y="214" font-size="11" fill="#808080">:new-task · :new-board · :rename</text>
+
+    <g filter="url(#cardShadow)">
+      <rect x="72" y="230" width="288" height="58" rx="6" fill="#252526" stroke="#F14C4C" stroke-width="1"/>
+    </g>
+    <rect x="84" y="242" width="42" height="16" rx="3" fill="#F14C4C"/>
+    <text x="105" y="254" text-anchor="middle" font-size="10" font-weight="bold" fill="#1E1E1E">BUG</text>
+    <text x="88" y="279" font-size="13" fill="#D4D4D4">Card wrap overflows border</text>
+    <text x="330" y="279" font-size="11" fill="#F14C4C">!</text>
+
+    <g filter="url(#cardShadow)">
+      <rect x="72" y="298" width="288" height="58" rx="6" fill="#252526" stroke="#4EC9B0" stroke-width="1"/>
+    </g>
+    <rect x="84" y="310" width="52" height="16" rx="3" fill="#4EC9B0"/>
+    <text x="110" y="322" text-anchor="middle" font-size="10" font-weight="bold" fill="#1E1E1E">DOCS</text>
+    <text x="88" y="347" font-size="13" fill="#D4D4D4">Document keybindings table</text>
+
+    <!-- ============ IN PROGRESS column (x 496..784) ============ -->
+    <g filter="url(#cardShadow)">
+      <rect x="496" y="150" width="288" height="70" rx="6" fill="#252526" stroke="#D19A66" stroke-width="1"/>
+    </g>
+    <rect x="508" y="162" width="46" height="16" rx="3" fill="#D19A66"/>
+    <text x="531" y="174" text-anchor="middle" font-size="10" font-weight="bold" fill="#1E1E1E">FEAT</text>
+    <text x="512" y="199" font-size="13" fill="#D4D4D4">Persist tab order to TOML</text>
+    <text x="512" y="214" font-size="11" fill="#808080">autosave on every change</text>
+
+    <g filter="url(#cardShadow)">
+      <rect x="496" y="230" width="288" height="58" rx="6" fill="#252526" stroke="#C586C0" stroke-width="1"/>
+    </g>
+    <rect x="508" y="242" width="70" height="16" rx="3" fill="#C586C0"/>
+    <text x="543" y="254" text-anchor="middle" font-size="10" font-weight="bold" fill="#1E1E1E">REFACTOR</text>
+    <text x="512" y="279" font-size="13" fill="#D4D4D4">Split render + model layers</text>
+    <text x="770" y="279" font-size="11" fill="#D19A66">◷</text>
+
+    <!-- ============ DONE column (x 920..1208) ============ -->
+    <g filter="url(#cardShadow)" opacity="0.9">
+      <rect x="920" y="150" width="288" height="58" rx="6" fill="#252526" stroke="#89D185" stroke-width="1"/>
+    </g>
+    <rect x="932" y="162" width="46" height="16" rx="3" fill="#89D185"/>
+    <text x="955" y="174" text-anchor="middle" font-size="10" font-weight="bold" fill="#1E1E1E">FEAT</text>
+    <text x="936" y="197" font-size="13" fill="#808080" text-decoration="line-through">Three-column board layout</text>
+
+    <g filter="url(#cardShadow)" opacity="0.9">
+      <rect x="920" y="218" width="288" height="58" rx="6" fill="#252526" stroke="#89D185" stroke-width="1"/>
+    </g>
+    <rect x="932" y="230" width="52" height="16" rx="3" fill="#89D185"/>
+    <text x="958" y="242" text-anchor="middle" font-size="10" font-weight="bold" fill="#1E1E1E">INFRA</text>
+    <text x="936" y="265" font-size="13" fill="#808080" text-decoration="line-through">Single-instance config lock</text>
+
+    <!-- command line at the bottom of the window -->
+    <rect x="40" y="358" width="1200" height="28" fill="#252526"/>
+    <text x="58" y="376" font-size="13" fill="#569CD6" font-weight="bold">:</text>
+    <text x="70" y="376" font-size="13" fill="#D4D4D4">categories</text>
+    <rect x="152" y="366" width="8" height="14" fill="#D4D4D4">
+      <animate attributeName="opacity" values="1;1;0;0" dur="1.1s" repeatCount="indefinite"/>
+    </rect>
+    <text x="1224" y="376" text-anchor="end" font-size="12" fill="#6A9955">h j k l · H L move · q quit</text>
+  </g>
+
+  <!-- ================= wordmark overlay ================= -->
+  <!-- solid gray hero panel so the wordmark + labels stay readable over the board -->
+  <g clip-path="url(#winClip)">
+    <rect x="62" y="166" width="820" height="188" rx="16" fill="url(#heroPanel)" stroke="#3A3A3E" stroke-width="1"/>
+    <!-- soft fade on the right edge so the panel blends into the board -->
+    <rect x="742" y="166" width="140" height="188" fill="url(#panelFade)"/>
+  </g>
+
+  <!-- stacked-cards glyph -->
+  <g transform="translate(88,172)">
+    <rect x="14" y="20" width="120" height="150" rx="14" fill="#04395E" stroke="#569CD6" stroke-width="2" transform="rotate(-9 74 95)"/>
+    <rect x="4" y="8" width="120" height="150" rx="14" fill="#252526" stroke="#4EC9B0" stroke-width="2" transform="rotate(-3 64 83)"/>
+    <rect x="0" y="0" width="120" height="150" rx="14" fill="#1E1E1E" stroke="#FFFFFF" stroke-width="2.5"/>
+    <rect x="16" y="18" width="56" height="14" rx="4" fill="#569CD6"/>
+    <line x1="16" y1="46" x2="104" y2="46" stroke="#3A3A3E" stroke-width="4" stroke-linecap="round"/>
+    <line x1="16" y1="62" x2="86" y2="62" stroke="#3A3A3E" stroke-width="4" stroke-linecap="round"/>
+    <line x1="16" y1="88" x2="104" y2="88" stroke="#2E2E32" stroke-width="4" stroke-linecap="round"/>
+    <line x1="16" y1="104" x2="72" y2="104" stroke="#2E2E32" stroke-width="4" stroke-linecap="round"/>
+    <path d="M16 128 l10 10 l20 -22" fill="none" stroke="#89D185" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <line x1="52" y1="130" x2="104" y2="130" stroke="#2E2E32" stroke-width="4" stroke-linecap="round"/>
+  </g>
+
+  <!-- title + tagline sit on a translucent panel so text stays readable -->
+  <g transform="translate(250,0)">
+    <text x="0" y="252" font-size="72" font-weight="bold" letter-spacing="-1">
+      <tspan fill="#FFFFFF">card</tspan><tspan fill="url(#wordAccent)">stack</tspan>
+    </text>
+    <text x="4" y="292" font-size="20" fill="#D4D4D4" letter-spacing="0.3">A keyboard-driven kanban board for your terminal</text>
+    <g font-size="14" transform="translate(4,322)">
+      <rect x="0" y="-15" width="66" height="22" rx="11" fill="#161618" stroke="#3F3F45"/>
+      <text x="33" y="0" text-anchor="middle" fill="#D19A66">Rust</text>
+      <rect x="78" y="-15" width="86" height="22" rx="11" fill="#161618" stroke="#3F3F45"/>
+      <text x="121" y="0" text-anchor="middle" fill="#4EC9B0">ratatui</text>
+      <rect x="176" y="-15" width="70" height="22" rx="11" fill="#161618" stroke="#3F3F45"/>
+      <text x="211" y="0" text-anchor="middle" fill="#569CD6">TUI</text>
+      <text x="262" y="0" fill="#6A9955">// autosave · vim-style · TOML boards</text>
+    </g>
+  </g>
+</svg>

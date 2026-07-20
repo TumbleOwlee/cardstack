@@ -1,3 +1,5 @@
+![Banner](./images/cardstack-banner.svg)
+
 # Cardstack
 
 A terminal (TUI) kanban board, written in Rust. Boards made of columns, columns
