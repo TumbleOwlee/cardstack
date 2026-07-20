@@ -45,24 +45,26 @@ centered.
 1-cell horizontal margin around its content: a labels row first (`UI-R-014`)
 if the task has any labels, followed by a blank row (only when the labels row
 is present), the title in bold below that, the description (non-bold, wrapped
-over multiple rows) below that, then a footer row with the category name at
-the bottom-left and the due date at the bottom-right, present only if the
-task has a category or a due date (a task with neither renders no footer row
-and no gap before it); when the footer row is present, a blank row separates
-it from the description above. The category name renders in uppercase as a bold badge
+over multiple rows) below that if the description is non-empty (an empty
+description renders no row and adds no height), then a footer row with the
+category name at the bottom-left and the due date at the bottom-right,
+present only if the task has a category or a due date (a task with neither
+renders no footer row and no gap before it); when the footer row is present,
+a blank row separates it from whatever is above (the description if present,
+otherwise the title). The category name renders in uppercase as a bold badge
 with its category color as the background and black or white foreground text,
 whichever has higher contrast against that background. A card's height is not
 fixed: it grows to fit however many rows its description and labels wrap to
-at the column's width (minimum one description row), so no description or
-label text is ever clipped.
+at the column's width, so no description or label text is ever clipped.
 
 **UI-R-012** — A card's border and title shall be colorized using its task's
 category color (`BD-R-040`); a task with no category renders in white
 (`BD-R-044`).
 
 **UI-R-013** — A card whose due date is in the past and whose status is not
-`Done` shall render its due-date text in the theme's error color; every other
-due date renders in the default text color.
+`Done` shall render its due-date text in the theme's error color. A due date
+that is today (regardless of status) renders in yellow. Every other due date
+renders in the default text color.
 
 **UI-R-014** — A task with one or more labels (`BD-R-010`) renders a labels
 row as the card's first row, above the title: each label as an uppercase badge

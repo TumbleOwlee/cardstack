@@ -85,7 +85,12 @@ fn label_lines(labels: &[String], width: u16) -> Vec<Vec<&String>> {
 /// content width available for the wrapped description.
 pub fn card_height(width: u16, task: &Task) -> u16 {
     let content_width = width.saturating_sub(4); // border (2) + horizontal margin (2)
-    let desc_lines = wrapped_line_count(&task.description, content_width);
+    // UI-R-011 — no description row at all when the description is empty.
+    let desc_lines = if task.description.is_empty() {
+        0
+    } else {
+        wrapped_line_count(&task.description, content_width)
+    };
     let label_rows = label_lines(&task.labels, content_width).len() as u16;
     // UI-R-011 — a blank row follows the labels row, only when it's present.
     let label_gap = if label_rows > 0 { 1 } else { 0 };
@@ -109,6 +114,11 @@ fn card_color(board: &Board, task: &Task) -> Color {
 fn is_overdue(task: &Task, today: NaiveDate) -> bool {
     task.due_date
         .is_some_and(|d| d < today && !matches!(task.status, crate::model::Status::Done))
+}
+
+/// UI-R-013 — a due date is "today" if it equals `today`, regardless of status.
+fn is_due_today(task: &Task, today: NaiveDate) -> bool {
+    task.due_date.is_some_and(|d| d == today)
 }
 
 /// UI-R-011 — render one task as a bordered card: bold title on row one,
@@ -151,6 +161,12 @@ pub fn render(
     let label_gap: u16 = if label_rows.is_empty() { 0 } else { 1 };
     let has_footer = task.category.is_some() || task.due_date.is_some();
     let footer_len: u16 = if has_footer { 1 } else { 0 };
+    // UI-R-011 — no description row at all when the description is empty.
+    let desc_len: u16 = if task.description.is_empty() {
+        0
+    } else {
+        wrapped_line_count(&task.description, inner.width)
+    };
 
     let [
         labels_a,
@@ -163,7 +179,7 @@ pub fn render(
         Constraint::Length(label_rows.len() as u16),
         Constraint::Length(label_gap),
         Constraint::Length(1),
-        Constraint::Min(1),
+        Constraint::Length(desc_len),
         Constraint::Length(footer_len),
         Constraint::Length(footer_len),
     ])
@@ -176,12 +192,14 @@ pub fn render(
         )),
         title_a,
     );
-    frame.render_widget(
-        Paragraph::new(task.description.as_str())
-            .style(Style::default().fg(COLOR_SCHEME.text))
-            .wrap(Wrap { trim: false }),
-        desc_a,
-    );
+    if !task.description.is_empty() {
+        frame.render_widget(
+            Paragraph::new(task.description.as_str())
+                .style(Style::default().fg(COLOR_SCHEME.text))
+                .wrap(Wrap { trim: false }),
+            desc_a,
+        );
+    }
 
     for (i, row) in label_rows.iter().enumerate() {
         let row_area = Rect::new(labels_a.x, labels_a.y + i as u16, labels_a.width, 1);
@@ -229,6 +247,8 @@ pub fn render(
     if let Some(due) = &due_text {
         let due_style = if is_overdue(task, today) {
             Style::default().fg(COLOR_SCHEME.error)
+        } else if is_due_today(task, today) {
+            Style::default().fg(Color::Yellow)
         } else {
             Style::default().fg(COLOR_SCHEME.text)
         };
@@ -292,6 +312,19 @@ mod tests {
         assert!(!is_overdue(&t, today), "Done tasks are never overdue");
     }
 
+    /// UI-R-013
+    #[test]
+    fn ut_due_today_flagged_regardless_of_status() {
+        let today = NaiveDate::from_ymd_opt(2026, 1, 1).unwrap();
+        let mut t = task("Due today");
+        t.due_date = Some(today);
+        assert!(is_due_today(&t, today));
+        assert!(!is_overdue(&t, today));
+
+        t.status = Status::Done;
+        assert!(is_due_today(&t, today));
+    }
+
     /// UI-R-012, BD-R-044
     #[test]
     fn ut_card_color_falls_back_without_category() {
@@ -324,22 +357,26 @@ mod tests {
     /// UI-R-011, UI-R-014
     #[test]
     fn ut_card_height_unchanged_without_labels() {
-        let t = task("No labels");
+        let mut t = task("No labels");
+        t.description = "desc".to_string();
         assert_eq!(card_height(30, &t), CARD_FIXED_ROWS + 1);
     }
 
     /// UI-R-011
     #[test]
     fn ut_card_footer_row_and_gap_only_when_footer_has_content() {
-        let empty = task("No category, no due date");
+        let mut empty = task("No category, no due date");
+        empty.description = "desc".to_string();
         let without_footer = CARD_FIXED_ROWS + 1;
         assert_eq!(card_height(30, &empty), without_footer);
 
         let mut with_category = task("Has category");
+        with_category.description = "desc".to_string();
         with_category.category = Some("cat".to_string());
         assert_eq!(card_height(30, &with_category), without_footer + 2);
 
         let mut with_due = task("Has due date");
+        with_due.description = "desc".to_string();
         with_due.due_date = Some(NaiveDate::from_ymd_opt(2026, 1, 1).unwrap());
         assert_eq!(card_height(30, &with_due), without_footer + 2);
     }
@@ -351,6 +388,17 @@ mod tests {
         t.labels = vec!["bug".to_string(), "urgent".to_string()];
         let without_labels_height = CARD_FIXED_ROWS + 1;
         assert!(card_height(30, &t) > without_labels_height);
+    }
+
+    /// UI-R-011
+    #[test]
+    fn ut_card_height_no_description_row_when_empty() {
+        let t = task("No description");
+        assert_eq!(card_height(30, &t), CARD_FIXED_ROWS);
+
+        let mut with_desc = task("Has description");
+        with_desc.description = "desc".to_string();
+        assert_eq!(card_height(30, &with_desc), CARD_FIXED_ROWS + 1);
     }
 
     /// UI-R-014
