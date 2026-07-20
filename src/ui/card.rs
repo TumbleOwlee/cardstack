@@ -93,14 +93,14 @@ pub fn card_height(width: u16, task: &Task) -> u16 {
     CARD_FIXED_ROWS + desc_lines + label_rows + label_gap
 }
 
-/// BD-R-040, UI-R-012 — a task's card color: its category's color, or the
-/// theme's default border color if it has none (BD-R-044).
+/// BD-R-040, UI-R-012 — a task's card color: its category's color, or white
+/// if it has none (BD-R-044).
 fn card_color(board: &Board, task: &Task) -> Color {
     task.category
         .as_deref()
         .and_then(|name| board.categories.iter().find(|c| c.name == name))
         .map(|c| Color::Rgb(c.color.0, c.color.1, c.color.2))
-        .unwrap_or(COLOR_SCHEME.border)
+        .unwrap_or(Color::White)
 }
 
 /// UI-R-013 — a due date is overdue if it's in the past and the task isn't `Done`.
@@ -293,7 +293,7 @@ mod tests {
     fn ut_card_color_falls_back_without_category() {
         let board = Board::new("b");
         let t = task("No category");
-        assert_eq!(card_color(&board, &t), COLOR_SCHEME.border);
+        assert_eq!(card_color(&board, &t), Color::White);
     }
 
     /// UI-R-011

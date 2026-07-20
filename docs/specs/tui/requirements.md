@@ -55,8 +55,8 @@ at the column's width (minimum one description row), so no description or
 label text is ever clipped.
 
 **UI-R-012** — A card's border and title shall be colorized using its task's
-category color (`BD-R-040`); a task with no category renders with the theme's
-default border color (`BD-R-044`).
+category color (`BD-R-040`); a task with no category renders in white
+(`BD-R-044`).
 
 **UI-R-013** — A card whose due date is in the past and whose status is not
 `Done` shall render its due-date text in the theme's error color; every other
