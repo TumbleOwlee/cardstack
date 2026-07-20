@@ -69,8 +69,9 @@ its neighbors, with a background color and black-or-white foreground text
 chosen by the same contrast rule as `UI-R-011`'s category badge. Badge colors
 are assigned by each label's first-seen position among the active board's
 tasks (in board task order), indexed into the same fixed palette `BD-R-041`
-uses for categories, cycling if there are more distinct labels than palette
-entries; this mapping is recomputed on every render and is not persisted. The
+uses for categories but walked in reverse order, cycling if there are more
+distinct labels than palette entries; this mapping is recomputed on every
+render and is not persisted. The
 labels row wraps to as many rows as needed, using the same greedy word-wrap
 as the description — no label is ever hidden. A task with no labels renders
 no labels row and adds no height.

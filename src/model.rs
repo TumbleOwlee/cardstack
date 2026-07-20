@@ -213,18 +213,16 @@ impl Board {
     }
 
     /// UI-R-014 — label badge colors: first-seen order across this board's
-    /// tasks, indexed into the same palette BD-R-041 uses for categories.
-    /// Recomputed fresh on every call; not persisted.
+    /// tasks, indexed into the same palette BD-R-041 uses for categories but
+    /// walked in reverse order. Recomputed fresh on every call; not persisted.
     pub fn label_colors(&self) -> std::collections::HashMap<String, (u8, u8, u8)> {
         let mut map = std::collections::HashMap::new();
         for task in &self.tasks {
             for label in &task.labels {
                 if !map.contains_key(label) {
                     let idx = map.len();
-                    map.insert(
-                        label.clone(),
-                        CATEGORY_PALETTE[idx % CATEGORY_PALETTE.len()],
-                    );
+                    let rev_idx = CATEGORY_PALETTE.len() - 1 - (idx % CATEGORY_PALETTE.len());
+                    map.insert(label.clone(), CATEGORY_PALETTE[rev_idx]);
                 }
             }
         }
@@ -363,8 +361,9 @@ mod tests {
         b.tasks[1].labels = vec!["bug".to_string(), "urgent".to_string()];
 
         let colors = b.label_colors();
-        assert_eq!(colors["bug"], CATEGORY_PALETTE[0]);
-        assert_eq!(colors["urgent"], CATEGORY_PALETTE[1]);
+        let last = CATEGORY_PALETTE.len() - 1;
+        assert_eq!(colors["bug"], CATEGORY_PALETTE[last]);
+        assert_eq!(colors["urgent"], CATEGORY_PALETTE[last - 1]);
     }
 
     /// UI-R-014
@@ -377,9 +376,10 @@ mod tests {
             .collect();
 
         let colors = b.label_colors();
+        let last = CATEGORY_PALETTE.len() - 1;
         assert_eq!(
             colors[&format!("label{}", CATEGORY_PALETTE.len())],
-            CATEGORY_PALETTE[0]
+            CATEGORY_PALETTE[last]
         );
     }
 
