@@ -1,6 +1,7 @@
 mod app;
 mod command;
 mod dialog;
+mod filter;
 mod focus;
 mod model;
 mod storage;

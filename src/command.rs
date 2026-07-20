@@ -7,6 +7,7 @@ pub enum Command {
     Swap(usize, usize),
     Delete,
     Categories,
+    Filter(String),
     Quit,
     Unknown(String),
 }
@@ -23,6 +24,10 @@ pub const HELP: &[(&str, &str)] = &[
     (":swap <i> <j>", "Swap the tab positions of two boards"),
     (":delete", "Delete the active board (with confirmation)"),
     (":categories", "Open the category-management dialog"),
+    (
+        ":filter <cond>",
+        "Filter cards by category / label (blank clears)",
+    ),
     (":q", "Quit the application"),
 ];
 
@@ -50,6 +55,7 @@ pub fn parse(input: &str) -> Command {
         }
         "delete" => Command::Delete,
         "categories" => Command::Categories,
+        "filter" => Command::Filter(rest.to_string()),
         "q" => Command::Quit,
         _ => Command::Unknown(input.to_string()),
     }
@@ -105,6 +111,17 @@ mod tests {
     #[test]
     fn ut_parse_delete() {
         assert_eq!(parse("delete"), Command::Delete);
+    }
+
+    /// UI-R-060 — `filter` captures its condition text; bare `filter` yields
+    /// an empty condition (which the app treats as "clear").
+    #[test]
+    fn ut_parse_filter_captures_condition() {
+        assert_eq!(
+            parse("filter category=work label=bug"),
+            Command::Filter("category=work label=bug".to_string())
+        );
+        assert_eq!(parse("filter"), Command::Filter(String::new()));
     }
 
     /// UI-R-051 — an unrecognized command is reported, not silently accepted.

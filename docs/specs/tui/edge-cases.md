@@ -42,6 +42,13 @@ preferring the focused column, then falling back so focus lands on some visible
 card if one exists. If the filter empties the focused column entirely, that
 column has no focused card (`UI-R-020`), consistent with an empty column.
 
+**Filter values cannot contain whitespace.** `:filter` terms are
+whitespace-separated (`UI-R-060`), so a category or label whose name contains a
+space cannot be named in full — `:filter category=Project X` reads `Project` as
+the category value and `X` as an unknown term (an error). Accepted for the MVP:
+the command surface stays a simple space-delimited term list rather than
+introducing quoting.
+
 **Filter matching nothing.** A filter whose condition matches no task renders
 the columns empty rather than surfacing an error or refusing the filter — the
 same as a board with no matching tasks. Clearing the filter restores the cards.

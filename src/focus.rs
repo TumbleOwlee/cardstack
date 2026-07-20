@@ -20,9 +20,9 @@ impl Focus {
     pub fn resync(&mut self, board: &Board) {
         let still_present = self
             .id
-            .is_some_and(|id| board.tasks_in(self.column).any(|t| t.id == id));
+            .is_some_and(|id| board.visible_tasks_in(self.column).any(|t| t.id == id));
         if !still_present {
-            self.id = board.tasks_in(self.column).map(|t| t.id).next();
+            self.id = board.visible_tasks_in(self.column).map(|t| t.id).next();
         }
     }
 
@@ -41,7 +41,7 @@ impl Focus {
 
     /// UI-R-022 — move card focus within the current column; no-op at either edge.
     pub fn move_card(&mut self, board: &Board, forward: bool) {
-        let ids: Vec<u64> = board.tasks_in(self.column).map(|t| t.id).collect();
+        let ids: Vec<u64> = board.visible_tasks_in(self.column).map(|t| t.id).collect();
         let Some(pos) = self.id.and_then(|id| ids.iter().position(|&i| i == id)) else {
             return;
         };
