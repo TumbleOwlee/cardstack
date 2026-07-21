@@ -75,13 +75,17 @@ row as the card's first row, above the title: each label as an uppercase badge
 brackets — same shape as `UI-R-011`'s category badge), space-separated from
 its neighbors, with a background color and black-or-white foreground text
 chosen by the same contrast rule as `UI-R-011`'s category badge. Badge colors
-are assigned by each label's first-seen position among the active board's
-tasks (in board task order), comparing labels case-insensitively so e.g.
-`Something` and `SomeThing` are the same label for coloring purposes,
-indexed into the same fixed palette `BD-R-041` uses for categories but
-walked in reverse order, cycling if there are more distinct labels than
-palette entries; this mapping is recomputed on every render and is not
-persisted. The labels row wraps to as many rows as needed,
+are assigned by each label's first-seen order since the board was loaded
+(comparing labels case-insensitively so e.g. `Something` and `SomeThing` are
+the same label for coloring purposes), indexed into the same fixed palette
+`BD-R-041` uses for categories but walked in reverse order, cycling if there
+are more distinct labels than palette entries. Once a label has been
+assigned a color it keeps that color for the lifetime of the running board:
+reordering, moving, or deleting tasks never changes an already-assigned
+label's color, and a label seen for the first time is appended to the end of
+the assignment order. This assignment is held only in memory and is not
+persisted — reloading the board recomputes it from scratch against the
+reloaded task order. The labels row wraps to as many rows as needed,
 using the same greedy word-wrap as the description — no label is ever
 hidden. A task with no labels renders
 no labels row and adds no height.
