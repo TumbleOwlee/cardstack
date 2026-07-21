@@ -71,6 +71,10 @@ pub struct Board {
     /// memory (never persisted).
     #[serde(skip)]
     pub filter: Option<Filter>,
+    /// UI-R-014 — labels seen so far this session, in first-seen order; held
+    /// only in memory (never persisted).
+    #[serde(skip)]
+    label_color_order: std::cell::RefCell<Vec<String>>,
 }
 
 /// BD-R-041 — palette categories are auto-assigned from, cycling once exhausted.
@@ -96,6 +100,7 @@ impl Board {
             tasks: Vec::new(),
             next_id: 0,
             filter: None,
+            label_color_order: std::cell::RefCell::new(Vec::new()),
         }
     }
 
@@ -228,24 +233,32 @@ impl Board {
             .filter(move |t| self.filter.as_ref().is_none_or(|f| f.matches(t)))
     }
 
-    /// UI-R-014 — label badge colors: first-seen order across this board's
-    /// tasks, compared case-insensitively, indexed into the same palette
-    /// BD-R-041 uses for categories but walked in reverse order. Recomputed
-    /// fresh on every call; not persisted. Keyed by lowercased label text —
-    /// look up with the same lowercasing.
+    /// UI-R-014 — label badge colors: first-seen order since the board was
+    /// loaded, compared case-insensitively, indexed into the same palette
+    /// BD-R-041 uses for categories but walked in reverse order. Once a label
+    /// has been assigned a color it keeps it for the lifetime of the running
+    /// board — reordering, moving, or deleting tasks never changes an
+    /// already-assigned label's color; a label seen for the first time is
+    /// appended to the end of the assignment order. Not persisted. Keyed by
+    /// lowercased label text — look up with the same lowercasing.
     pub fn label_colors(&self) -> std::collections::HashMap<String, (u8, u8, u8)> {
-        let mut map = std::collections::HashMap::new();
+        let mut order = self.label_color_order.borrow_mut();
         for task in &self.tasks {
             for label in &task.labels {
                 let key = label.to_lowercase();
-                if !map.contains_key(&key) {
-                    let idx = map.len();
-                    let rev_idx = CATEGORY_PALETTE.len() - 1 - (idx % CATEGORY_PALETTE.len());
-                    map.insert(key, CATEGORY_PALETTE[rev_idx]);
+                if !order.contains(&key) {
+                    order.push(key);
                 }
             }
         }
-        map
+        order
+            .iter()
+            .enumerate()
+            .map(|(idx, key)| {
+                let rev_idx = CATEGORY_PALETTE.len() - 1 - (idx % CATEGORY_PALETTE.len());
+                (key.clone(), CATEGORY_PALETTE[rev_idx])
+            })
+            .collect()
     }
 }
 
@@ -431,5 +444,73 @@ mod tests {
         assert_eq!(colors.len(), 2);
         assert_eq!(colors["something"], CATEGORY_PALETTE[last]);
         assert_eq!(colors["other"], CATEGORY_PALETTE[last - 1]);
+    }
+
+    /// UI-R-014
+    #[test]
+    fn ut_label_colors_stable_across_reorder() {
+        let mut b = Board::new("b");
+        b.create_task("t1", Status::Open);
+        b.tasks[0].labels = vec!["bug".to_string()];
+        let second = b.create_task("t2", Status::Open);
+        b.tasks[1].labels = vec!["urgent".to_string()];
+
+        let before = b.label_colors();
+        b.reorder(second, false);
+        assert_eq!(b.tasks[0].id, second);
+        let after = b.label_colors();
+
+        assert_eq!(before["bug"], after["bug"]);
+        assert_eq!(before["urgent"], after["urgent"]);
+    }
+
+    /// UI-R-014
+    #[test]
+    fn ut_label_colors_stable_after_move_status() {
+        let mut b = Board::new("b");
+        b.create_task("t1", Status::Open);
+        b.tasks[0].labels = vec!["bug".to_string()];
+        let second = b.create_task("t2", Status::Open);
+        b.tasks[1].labels = vec!["urgent".to_string()];
+
+        let before = b.label_colors();
+        b.move_status(second, Status::Done);
+        let after = b.label_colors();
+
+        assert_eq!(before["bug"], after["bug"]);
+        assert_eq!(before["urgent"], after["urgent"]);
+    }
+
+    /// UI-R-014
+    #[test]
+    fn ut_label_colors_stable_after_delete() {
+        let mut b = Board::new("b");
+        let first = b.create_task("t1", Status::Open);
+        b.tasks[0].labels = vec!["bug".to_string()];
+        b.create_task("t2", Status::Open);
+        b.tasks[1].labels = vec!["urgent".to_string()];
+
+        let before = b.label_colors();
+        b.delete_task(first);
+        let after = b.label_colors();
+
+        assert_eq!(before["urgent"], after["urgent"]);
+    }
+
+    /// UI-R-014
+    #[test]
+    fn ut_label_colors_new_label_appended_after_cache_established() {
+        let mut b = Board::new("b");
+        b.create_task("t1", Status::Open);
+        b.tasks[0].labels = vec!["bug".to_string()];
+        let seeded = b.label_colors();
+
+        b.create_task("t2", Status::Open);
+        b.tasks[1].labels = vec!["urgent".to_string()];
+        let after = b.label_colors();
+
+        assert_eq!(seeded["bug"], after["bug"]);
+        let last = CATEGORY_PALETTE.len() - 1;
+        assert_eq!(after["urgent"], CATEGORY_PALETTE[last - 1]);
     }
 }
