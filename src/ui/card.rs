@@ -15,8 +15,8 @@ use unicode_width::UnicodeWidthStr;
 use super::contrasting_text;
 use crate::model::{Board, Task};
 
-/// Non-content rows: top+bottom border, title row.
-const CARD_FIXED_ROWS: u16 = 3;
+/// Non-content rows: top+bottom border.
+const CARD_FIXED_ROWS: u16 = 2;
 
 /// UI-R-011 — count how many rows `text` wraps to at `width` columns
 /// (greedy word-wrap, matching `Paragraph`'s `Wrap { trim: false }`).
@@ -85,6 +85,7 @@ fn label_lines(labels: &[String], width: u16) -> Vec<Vec<&String>> {
 /// content width available for the wrapped description.
 pub fn card_height(width: u16, task: &Task) -> u16 {
     let content_width = width.saturating_sub(4); // border (2) + horizontal margin (2)
+    let title_lines = wrapped_line_count(&task.title, content_width);
     // UI-R-011 — no description row at all when the description is empty.
     let desc_lines = if task.description.is_empty() {
         0
@@ -97,7 +98,7 @@ pub fn card_height(width: u16, task: &Task) -> u16 {
     // UI-R-011 — footer row (plus its lead-in gap) only when it has content.
     let has_footer = task.category.is_some() || task.due_date.is_some();
     let footer_rows = if has_footer { 2 } else { 0 };
-    CARD_FIXED_ROWS + desc_lines + label_rows + label_gap + footer_rows
+    CARD_FIXED_ROWS + title_lines + desc_lines + label_rows + label_gap + footer_rows
 }
 
 /// BD-R-040, UI-R-012 — a task's card color: its category's color, or white
@@ -167,6 +168,7 @@ pub fn render(
     } else {
         wrapped_line_count(&task.description, inner.width)
     };
+    let title_len: u16 = wrapped_line_count(&task.title, inner.width);
 
     let [
         labels_a,
@@ -178,7 +180,7 @@ pub fn render(
     ] = Layout::vertical([
         Constraint::Length(label_rows.len() as u16),
         Constraint::Length(label_gap),
-        Constraint::Length(1),
+        Constraint::Length(title_len),
         Constraint::Length(desc_len),
         Constraint::Length(footer_len),
         Constraint::Length(footer_len),
@@ -186,10 +188,9 @@ pub fn render(
     .areas(inner);
 
     frame.render_widget(
-        Paragraph::new(Span::styled(
-            task.title.as_str(),
-            Style::default().fg(color).add_modifier(Modifier::BOLD),
-        )),
+        Paragraph::new(task.title.as_str())
+            .style(Style::default().fg(color).add_modifier(Modifier::BOLD))
+            .wrap(Wrap { trim: false }),
         title_a,
     );
     if !task.description.is_empty() {
@@ -359,7 +360,10 @@ mod tests {
     fn ut_card_height_unchanged_without_labels() {
         let mut t = task("No labels");
         t.description = "desc".to_string();
-        assert_eq!(card_height(30, &t), CARD_FIXED_ROWS + 1);
+        assert_eq!(
+            card_height(30, &t),
+            CARD_FIXED_ROWS + 1 /* title */ + 1 /* desc */
+        );
     }
 
     /// UI-R-011
@@ -367,7 +371,7 @@ mod tests {
     fn ut_card_footer_row_and_gap_only_when_footer_has_content() {
         let mut empty = task("No category, no due date");
         empty.description = "desc".to_string();
-        let without_footer = CARD_FIXED_ROWS + 1;
+        let without_footer = CARD_FIXED_ROWS + 1 /* title */ + 1 /* desc */;
         assert_eq!(card_height(30, &empty), without_footer);
 
         let mut with_category = task("Has category");
@@ -394,11 +398,14 @@ mod tests {
     #[test]
     fn ut_card_height_no_description_row_when_empty() {
         let t = task("No description");
-        assert_eq!(card_height(30, &t), CARD_FIXED_ROWS);
+        assert_eq!(card_height(30, &t), CARD_FIXED_ROWS + 1 /* title */);
 
         let mut with_desc = task("Has description");
         with_desc.description = "desc".to_string();
-        assert_eq!(card_height(30, &with_desc), CARD_FIXED_ROWS + 1);
+        assert_eq!(
+            card_height(30, &with_desc),
+            CARD_FIXED_ROWS + 1 /* title */ + 1 /* desc */
+        );
     }
 
     /// UI-R-014
@@ -422,5 +429,24 @@ mod tests {
         assert!(out.contains(" BUG "));
         assert!(!out.contains('['));
         assert!(!out.contains(']'));
+    }
+
+    /// UI-R-011
+    #[test]
+    fn ut_card_height_grows_for_wrapped_title() {
+        let short = task("Short");
+        let long = task("This is a very long title that will not fit on one row");
+        assert!(card_height(20, &long) > card_height(20, &short));
+    }
+
+    /// UI-R-011
+    #[test]
+    fn ut_card_renders_wrapped_title_without_clipping() {
+        let board = Board::new("b");
+        let t = task("This is a very long title that will not fit on one row");
+        let out = render_to_string(&t, &board, NaiveDate::from_ymd_opt(2026, 1, 1).unwrap());
+        for word in ["This", "very", "long", "title", "will", "not", "fit", "row"] {
+            assert!(out.contains(word), "missing word {word:?} in rendered card");
+        }
     }
 }
